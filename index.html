@@ -3,6 +3,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>DigiPro</title>
+<meta name="description" content="Functional digital camera mockup. Capture photos, preview, manage your gallery, and share.">
+<meta name="theme-color" content="#111111">
+<meta name="apple-mobile-web-app-title" content="DigiPro">
+<link rel="manifest" href="digipro.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800&family=VT323&display=swap" rel="stylesheet">
 <style>
 :root{--bg1:#cfe6f7;--bg2:#f2d3ee;--ink:#2b3140;--body1:#f4f6f9;--body2:#aeb5c2;--edge:#7b8394;--lcd:#0b1210;--btn:#dfe3ea;--accent:#e8402f;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
@@ -66,6 +72,14 @@ button{font-family:inherit;cursor:pointer;color:inherit}
 #bWa{background:linear-gradient(#3fe07a,#18b24b);color:#fff}
 #shutter{width:66px;height:66px}
 #bSend{position:absolute;right:16px;bottom:14px;z-index:11;display:none;align-items:center;gap:6px;border:0;border-radius:999px;background:#18b24b;color:#fff;font-weight:800;font-size:13px;padding:12px 18px;box-shadow:0 4px 12px rgba(0,0,0,.3)}
+/* ---- PWA extras: language toggle, install button, iOS tip (kept clear of every screen edge) ---- */
+#pwaBar{position:absolute;right:max(16px,env(safe-area-inset-right,0px));top:14px;z-index:10;display:flex;align-items:center;gap:8px}
+#pwaBar .sm{padding:9px 13px;font-size:10px;white-space:nowrap;box-shadow:0 3px 0 #7b8394,0 4px 10px rgba(40,40,80,.2)}
+#bInstall{display:none}
+#bLang b{font-weight:600;opacity:.45}
+#bLang b.on{font-weight:800;opacity:1}
+#iosTip{position:absolute;left:max(16px,env(safe-area-inset-left,0px));bottom:16px;z-index:10;display:none;align-items:center;gap:8px;max-width:min(320px,36%);background:rgba(255,255,255,.88);color:#2b3140;padding:8px 8px 8px 12px;border-radius:14px;box-shadow:0 2px 10px rgba(40,40,80,.28);font-size:9px;font-weight:600;line-height:1.35}
+#iosTip .sm{padding:4px 9px;font-size:12px;box-shadow:0 2px 0 #7b8394}
 </style></head><body>
 <div id="spacer"></div>
 <div id="app">
@@ -93,11 +107,27 @@ button{font-family:inherit;cursor:pointer;color:inherit}
  <button class="fab" id="bWa" aria-label="Send photos on WhatsApp"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5a9.4 9.4 0 0 0-8 14.3L2.7 21.5l4.8-1.2A9.4 9.4 0 1 0 12 2.5zm0 1.9a7.5 7.5 0 1 1-3.9 13.9l-.3-.2-2.8.7.8-2.7-.2-.3A7.5 7.5 0 0 1 12 4.4z"/><path d="M8.7 7.9c.3-.5.7-.5 1-.4.2.1 1 1.7 1 1.9 0 .3-.5.8-.7 1 .5 1 1.3 1.8 2.5 2.4.2-.3.6-.9.9-.9.3 0 1.7.8 1.8 1 .1.2.1.9-.5 1.4-.7.6-1.700.7-3.100.1-1.900-.8-3.600-2.600-4.200-4.500-.2-.7.1-1.400.5-2z"/></svg></button>
 </div>
 <button id="bSend">SEND ON WHATSAPP</button>
+<div id="pwaBar"><button class="sm" id="bInstall" type="button">Install App</button><button class="sm" id="bLang" type="button" aria-label="Language / Idioma"><b class="on">EN</b> / <b>ES</b></button></div>
+<div id="iosTip" role="note"><span id="iosTxt"></span><button class="sm" id="iosX" type="button" aria-label="Close">×</button></div>
 <div class="scr" id="gal"><div id="galin">
   <div id="galtop"><span id="galcount">MEMORY STICK</span><button class="sm" id="bAll">SAVE ALL</button><button class="sm" id="bBack">BACK</button></div>
   <div id="grid"></div></div></div>
 <div class="scr" id="viewer"><img id="vimg" alt="Photo"><div class="bar"><button class="sm" id="vSave">SAVE</button><button class="sm" id="vDel">DELETE</button><button class="sm" id="vBack">BACK</button></div></div>
 </div>
+<script>
+/* ---- i18n core (EN/ES, switched in place, no reload) ---- */
+let LANG=(()=>{try{const s=localStorage.getItem('digipro_lang');if(s==='en'||s==='es')return s;}catch(e){}return /^es/i.test(navigator.language||'')?'es':'en';})();
+let dpBtnKey='SEND ON WHATSAPP';
+const DP_ES={
+ 'STARTING...':'INICIANDO...','NO CAMERA':'SIN CÁMARA','Allow camera access, then tap the camera to retry.':'Permite el acceso a la cámara y toca la cámara para reintentar.',
+ 'NO IMAGES':'SIN IMÁGENES','DELETED':'BORRADA','DELETE THIS?':'¿BORRAR ESTA?','DELETE LAST?':'¿BORRAR LA ÚLTIMA?','Press again':'Pulsa otra vez',
+ 'MEMORY FULL':'MEMORIA LLENA','Delete shots first.':'Borra fotos primero.','Delete shots in MEMORY STICK.':'Borra fotos en MEMORIA.','MEMORY STICK':'MEMORIA',
+ 'SAVING...':'GUARDANDO...','SAVE ERROR':'ERROR AL GUARDAR','Storage is full.':'Almacenamiento lleno.','CAN’T OPEN':'NO SE PUEDE ABRIR','Try a JPG or PNG.':'Prueba con JPG o PNG.',
+ 'PHOTO COPIED':'FOTO COPIADA','COPY FAILED':'ERROR AL COPIAR','SEND ON WHATSAPP':'ENVIAR POR WHATSAPP','OPEN WHATSAPP':'ABRIR WHATSAPP','COPY & OPEN WHATSAPP':'COPIAR Y ABRIR WHATSAPP',
+ 'SAVE ALL':'GUARDAR TODO','BACK':'ATRÁS','SAVE':'GUARDAR','DELETE':'BORRAR','SIZE':'TAMAÑO','SELF':'SELFIE','PLAY':'VER'
+};
+function tr(s){return (LANG==='es'&&s&&DP_ES[s])||s;}
+</script>
 <script>
 /* ===== Y2K DIGICAM =====
    Pipeline per frame (preview 320x240, capture 640x480):
@@ -116,7 +146,7 @@ const MODES=[
  {n:'SEPIA',g:[1.12,.95,.72], s:0,  c:1.1, b:4, no:14,bl:.2},
  {n:'B&W',  g:[1,1,1],       s:0,  c:1.25,b:0, no:20,bl:.2}
 ];
-const FLASH=['AUTO','ON','OFF'];
+let FLASH=['AUTO','ON','OFF'];
 let mode=0, flashMode=0, facing='environment', stream=null, busy=false, frozen=false, avgLuma=128, photos=[], zoom=1, showHud=true, delArm=0, flipping=false, rot=0, uploadImg=null;
 const video=document.createElement('video'); video.playsInline=true; video.muted=true;
 const view=$('#view'), vctx=view.getContext('2d',{willReadFrequently:true});
@@ -144,7 +174,7 @@ async function startCam(){
   video.srcObject=stream; await video.play(); showMsg('');
  }catch(e){ stream=null; showMsg('NO CAMERA','Allow camera access, then tap the camera to retry.'); }
 }
-function showMsg(a,b){const m=$('#msg'); if(!a){m.style.display='none';return;} m.style.display='flex'; m.innerHTML=a+(b?'<small>'+b+'</small>':'');}
+function showMsg(a,b){a=tr(a);b=tr(b);const m=$('#msg'); if(!a){m.style.display='none';return;} m.style.display='flex'; m.innerHTML=a+(b?'<small>'+b+'</small>':'');}
 
 /* ---- the filter pipeline ---- */
 let bufs={};
@@ -196,13 +226,13 @@ function loop(t){ requestAnimationFrame(loop); if(frozen||!stream||t-last<66)ret
 
 /* ---- camera controls: invisible hit zones laid over the photo of the real camera ---- */
 const IW=1448,IH=1086,wait0=ms=>new Promise(r=>setTimeout(r,ms));
-function hud(){hud0();if(playing){$('#hMode').textContent='PLAY ▶';$('#hFlash').textContent='◀ ▶';$('#hLeft').textContent=(pIdx+1)+'/'+photos.length;$('#hZoom').textContent=pz>1?'ZOOM '+pz.toFixed(1)+'x':'DSC'+String(pIdx+1).padStart(5,'0');}}
+function hud(){hud0();if(playing){$('#hMode').textContent=tr('PLAY')+' ▶';$('#hFlash').textContent='◀ ▶';$('#hLeft').textContent=(pIdx+1)+'/'+photos.length;$('#hZoom').textContent=pz>1?'ZOOM '+pz.toFixed(1)+'x':'DSC'+String(pIdx+1).padStart(5,'0');}}
 function hud0(){
  $('#hudTop').style.display=$('#hudBot').style.display=showHud?'flex':'none';
- $('#hMode').textContent=MODES[mode].n+(facing==='user'?' SELF':'');
+ $('#hMode').textContent=MODES[mode].n+(facing==='user'?' '+tr('SELF'):'');
  $('#hFlash').textContent='⚡'+(flashMode===2?'✕':FLASH[flashMode][0]);
  $('#hLeft').textContent='▣ '+(MAX-photos.length);
- $('#hZoom').textContent=zoom>1?'ZOOM '+zoom.toFixed(1)+'x':'SIZE 640×480';
+ $('#hZoom').textContent=zoom>1?'ZOOM '+zoom.toFixed(1)+'x':tr('SIZE')+' 640×480';
 }
 function setMode(i){ if(playing){ if(photos.length){pIdx+=i>mode?1:-1;drawPlay();} return;} mode=(i+MODES.length)%MODES.length;hud();}
 function cycleFlash(){flashMode=(flashMode+1)%3;hud();noteMsg('FLASH '+FLASH[flashMode]);}
@@ -317,8 +347,8 @@ addEventListener('keydown',e=>{if(e.code==='Space'&&$('#gal').style.display!=='f
 let cur=null;
 function openGal(){click();$('#gal').style.display='flex';drawGrid();}
 function drawGrid(){
- const g=$('#grid');g.innerHTML='';$('#galcount').textContent='MEMORY STICK  '+photos.length+'/'+MAX;
- if(!photos.length){g.innerHTML='<p>NO IMAGES</p>';return;}
+ const g=$('#grid');g.innerHTML='';$('#galcount').textContent=tr('MEMORY STICK')+'  '+photos.length+'/'+MAX;
+ if(!photos.length){g.innerHTML='<p>'+tr('NO IMAGES')+'</p>';return;}
  photos.forEach(p=>{const i=new Image();i.src=p.src;i.alt='Photo';i.onclick=()=>{cur=p;$('#vimg').src=p.src;$('#viewer').style.display='flex';click();};g.appendChild(i);});
 }
 $('#bGal').onclick=openGal;
@@ -372,7 +402,7 @@ const WA_APP='whatsapp://send?text='+encodeURIComponent(SHARE_TEXT);   // phones
 let waBlob=null;
 const pngOf=src=>new Promise((ok,no)=>{const i=new Image();i.onload=()=>{const c=document.createElement('canvas');c.width=i.naturalWidth;c.height=i.naturalHeight;c.getContext('2d').drawImage(i,0,0);c.toBlob(x=>x?ok(x):no(),'image/png');};i.onerror=no;i.src=src;});
 const copyPhoto=()=>navigator.clipboard.write([new ClipboardItem({'image/png':waBlob})]);
-function setBtn(t){const b=$('#bSend');b.textContent=t;b.style.display='flex';}
+function setBtn(t){const b=$('#bSend');dpBtnKey=t;b.textContent=tr(t);b.style.display='flex';}
 /* no file picker: the photo on the camera screen (the one being played back, or else the latest shot) is copied */
 $('#bWa').onclick=async()=>{
  const p=playing?photos[pIdx]:photos[photos.length-1];
@@ -383,4 +413,56 @@ $('#bWa').onclick=async()=>{
  else setBtn('COPY & OPEN WHATSAPP');
 };
 $('#bSend').onclick=()=>{$('#bSend').style.display='none'; if(waBlob)copyPhoto().catch(()=>noteMsg('COPY FAILED')); if(IS_DESKTOP)window.open(WA_URL,'_blank'); else location.href=WA_APP;};
+</script>
+<script>
+/* ===== PWA layer: language toggle, install button, iOS tip, service worker ===== */
+(()=>{
+ const MODE_NAMES={en:['AUTO','PARTY','NIGHT','CYBER','SEPIA','B&W'],es:['AUTO','FIESTA','NOCHE','CYBER','SEPIA','B/N']};
+ const ZONE_ES={'Shutter':'Obturador','Mode dial':'Rueda de modos','Menu: next mode':'Menú: modo siguiente','Display / index':'Pantalla / índice','Previous mode':'Modo anterior','Next mode':'Modo siguiente','OK':'OK','Flash':'Flash','Play':'Reproducir','Delete last':'Borrar última','Zoom in':'Acercar','Zoom out':'Alejar'};
+ const UI={
+  en:{install:'Install App',ios:'Install: Share → Add to Home Screen',up:'Upload photos',shutter:'Shutter',wa:'Send photos on WhatsApp',close:'Close'},
+  es:{install:'Instalar app',ios:'Instalar: Compartir → Añadir a pantalla de inicio',up:'Subir fotos',shutter:'Obturador',wa:'Enviar fotos por WhatsApp',close:'Cerrar'}
+ };
+ const STATIC={bAll:'SAVE ALL',bBack:'BACK',vSave:'SAVE',vDel:'DELETE',vBack:'BACK'};
+
+ function setLang(l){
+  LANG=l; try{localStorage.setItem('digipro_lang',l);}catch(e){}
+  document.documentElement.lang=l;
+  MODES.forEach((m,i)=>{m.n=MODE_NAMES[l][i];});
+  FLASH=l==='es'?['AUTO','SÍ','NO']:['AUTO','ON','OFF'];
+  for(const id in STATIC)$('#'+id).textContent=tr(STATIC[id]);
+  $('#bSend').textContent=tr(dpBtnKey);
+  if($('#gal').style.display==='flex')drawGrid(); else $('#galcount').textContent=tr('MEMORY STICK');
+  const u=UI[l];
+  $('#bInstall').textContent=u.install; $('#iosTxt').textContent=u.ios; $('#iosX').setAttribute('aria-label',u.close);
+  $('#bUp').setAttribute('aria-label',u.up); $('#shutter').setAttribute('aria-label',u.shutter); $('#bWa').setAttribute('aria-label',u.wa);
+  document.querySelectorAll('.zone').forEach((z,i)=>{const n=ZONES[i][0];z.setAttribute('aria-label',l==='es'?(ZONE_ES[n]||n):n);});
+  const b=document.querySelectorAll('#bLang b'); b[0].classList.toggle('on',l==='en'); b[1].classList.toggle('on',l==='es');
+  hud();
+ }
+ $('#bLang').onclick=()=>{click();setLang(LANG==='es'?'en':'es');};
+ setLang(LANG);
+
+ /* Install App: only appears when the browser says the app can be installed */
+ let dip=null; const bi=$('#bInstall');
+ const standalone=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+ addEventListener('beforeinstallprompt',e=>{e.preventDefault();dip=e;if(!standalone())bi.style.display='block';});
+ bi.onclick=async()=>{click();if(!dip)return;bi.style.display='none';try{dip.prompt();await dip.userChoice;}catch(e){}dip=null;};
+ addEventListener('appinstalled',()=>{dip=null;bi.style.display='none';});
+
+ /* iOS has no install prompt: show a small hint on Safari / iPhone / iPad until dismissed */
+ const isIOS=/iPhone|iPad|iPod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+ let tipSeen=false; try{tipSeen=localStorage.getItem('digipro_ios_tip')==='1';}catch(e){}
+ if(isIOS&&!standalone()&&!tipSeen){
+  const tip=$('#iosTip'); tip.style.display='flex';
+  const hide=()=>{tip.style.display='none';try{localStorage.setItem('digipro_ios_tip','1');}catch(e){}};
+  $('#iosX').onclick=()=>{click();hide();};
+  setTimeout(()=>{tip.style.display='none';},20000);
+ }
+
+ /* Service worker: relative path, so its scope is this folder only */
+ if('serviceWorker' in navigator){
+  addEventListener('load',()=>{navigator.serviceWorker.register('./digipro-sw.js').catch(()=>{});});
+ }
+})();
 </script></body></html>

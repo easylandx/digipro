@@ -1,0 +1,18 @@
+{
+  "name": "DigiPro — Digital Camera",
+  "short_name": "DigiPro",
+  "description": "Functional digital camera mockup. Capture photos, preview, manage your gallery, and share.",
+  "id": "https://easylandx.github.io/digipro/",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#000000",
+  "theme_color": "#111111",
+  "lang": "en",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
